@@ -39,7 +39,7 @@ pip install -r requirements.txt
 
 **Dependencies:**
 - `pyflp>=2.3.0` - FL Studio binary format
-- `pyableton>=0.2.0` - Ableton Live parser
+- `pyableton>=0.2.0` - Ableton Live parser (optional, XML parsing is built-in)
 
 ---
 
@@ -54,6 +54,9 @@ python convert.py -i project.als -o output.flp
 
 # Verbose mode
 python convert.py -i project.als -v
+
+# Convert FL Studio → Ableton
+python convert.py -i project.flp
 ```
 
 ---
@@ -192,9 +195,9 @@ Python 3.8+
 
 **Required:**
 - `pyflp>=2.3.0`
-- `pyableton>=0.2.0`
-
 **Optional:**
+- `pyableton>=0.2.0` - Ableton Live parser (XML parsing is built-in)
+
 - `numpy` - For audio processing
 
 ---
@@ -218,4 +221,3 @@ GPL-3.0
 - PyFLP: https://pyflp.readthedocs.io/
 - PyAbleton: https://maranedah.github.io/pyableton/
 - GitHub: https://github.com/AJDestroyer20/TransFLUENCE
-

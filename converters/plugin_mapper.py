@@ -41,12 +41,14 @@ ABLETON_TO_FL_EFFECTS = {
     'Compressor': 'Fruity Compressor',
     'Delay': 'Fruity Delay 3',
     'Distortion': 'Fruity Fast Dist',
-    'Echo': 'Fruity Delay Bank',
+    'Echo': 'Fruity Delay 3',
     'Eq8': 'Fruity Parametric EQ 2',
+    'EQ Eight': 'Fruity Parametric EQ 2',
     'Erosion': 'Fruity Bitcrusher',
     'FilterDelay': 'Fruity Delay 3',
     'Flanger': 'Fruity Flanger',
-    'GlueCompressor': 'Fruity Compressor',
+    'GlueCompressor': 'Fruity Limiter',
+    'Glue Compressor': 'Fruity Limiter',
     'GrainDelay': 'Fruity Granulizer',
     'Limiter': 'Fruity Limiter',
     'Looper': 'Fruity Slicer',
@@ -59,6 +61,9 @@ ABLETON_TO_FL_EFFECTS = {
     'SimpleDelay': 'Fruity Delay 3',
     'Utility': 'Fruity Balance',
     'Vocoder': 'Vocodex',
+    'DrumBuss': 'Maximus',
+    'Drum Buss': 'Maximus',
+    'Roar': 'Distructor',
     
     # FX racks
     'AudioEffectGroupDevice': 'Patcher',
@@ -224,7 +229,8 @@ class PluginMapper:
     """Map plugins, parameters, and racks between Ableton and FL Studio"""
     
     @staticmethod
-    def ableton_to_fl(ableton_name: str, is_instrument: bool = False) -> str:
+    def ableton_to_fl(ableton_name: str, is_instrument: bool = False,
+                      device_type: Optional[str] = None) -> str:
         """
         Map Ableton device to FL Studio plugin
         
@@ -235,16 +241,18 @@ class PluginMapper:
         Returns:
             FL Studio plugin name
         """
+        lookup_name = device_type or ableton_name
+
         # Check drums first (special case)
-        if ableton_name in ABLETON_TO_FL_DRUMS:
-            return ABLETON_TO_FL_DRUMS[ableton_name]
+        if lookup_name in ABLETON_TO_FL_DRUMS:
+            return ABLETON_TO_FL_DRUMS[lookup_name]
         
         # Check instruments
         if is_instrument:
-            return ABLETON_TO_FL_INSTRUMENTS.get(ableton_name, 'Sampler')
+            return ABLETON_TO_FL_INSTRUMENTS.get(lookup_name, 'Sampler')
         
         # Check effects
-        return ABLETON_TO_FL_EFFECTS.get(ableton_name, ableton_name)
+        return ABLETON_TO_FL_EFFECTS.get(lookup_name, ableton_name)
     
     @staticmethod
     def map_parameter_name(param_name: str) -> str:
