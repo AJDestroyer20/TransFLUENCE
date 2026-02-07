@@ -49,6 +49,7 @@ class Plugin:
     name: str
     manufacturer: str = "unknown"
     is_instrument: bool = False
+    device_type: Optional[str] = None
     vst_id: Optional[str] = None
     parameters: Dict[str, Any] = field(default_factory=dict)
     
@@ -71,6 +72,7 @@ class DrumPad:
 class Rack:
     """Plugin rack/chain"""
     name: str
+    rack_type: Optional[str] = None
     plugins: List[Plugin] = field(default_factory=list)
     drum_pads: List[DrumPad] = field(default_factory=list)
     
