@@ -450,7 +450,36 @@ class FLStudioWriter:
         if Project is None:
             raise ImportError("pyflp is required for PyFLP-based writing")
 
-        project = Project()
+        base_data = self._build_flp_binary(transproj)
+        with open(filepath, "wb") as handle:
+            handle.write(base_data)
+
+        project = self._load_pyflp_project(filepath)
+        self._apply_pyflp_updates(project, transproj)
+        self._save_pyflp_project(project, filepath)
+
+        logger.info("✓ Written %s with PyFLP", filepath)
+
+    def _load_pyflp_project(self, filepath: str):
+        """Load an existing FLP into PyFLP for updates."""
+        if hasattr(Project, "from_file"):
+            return Project.from_file(filepath)
+        if hasattr(Project, "open"):
+            return Project.open(filepath)
+        return Project(filepath)
+
+    def _save_pyflp_project(self, project, filepath: str):
+        """Persist PyFLP project to disk."""
+        if hasattr(project, "save"):
+            project.save(filepath)
+        elif hasattr(project, "write"):
+            project.write(filepath)
+        else:
+            with open(filepath, "wb") as handle:
+                handle.write(bytes(project))
+
+    def _apply_pyflp_updates(self, project, transproj: TransProj):
+        """Apply PyFLP updates on top of an existing FLP file."""
         if hasattr(project, "tempo"):
             project.tempo = transproj.tempo
 
@@ -530,16 +559,6 @@ class FLStudioWriter:
                         item.length = int(clip.duration * self.ppq)
                     if hasattr(item, "track"):
                         item.track = track_idx
-
-        if hasattr(project, "save"):
-            project.save(filepath)
-        elif hasattr(project, "write"):
-            project.write(filepath)
-        else:
-            with open(filepath, "wb") as handle:
-                handle.write(bytes(project))
-
-        logger.info("✓ Written %s with PyFLP", filepath)
 
 
 def write_flstudio_project(transproj: TransProj, filepath: str):
