@@ -54,6 +54,9 @@ python convert.py -i project.als -o output.flp
 
 # Verbose mode
 python convert.py -i project.als -v
+
+# Convert FL Studio → Ableton
+python convert.py -i project.flp
 ```
 
 ---

@@ -15,13 +15,18 @@ from converters.plugin_state_generator import PluginStateFactory
 
 logger = logging.getLogger(__name__)
 
+try:
+    from pyflp import Project  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    Project = None
+
 
 class FLStudioWriter:
     """Write FL Studio projects using hybrid approach"""
     
     def __init__(self):
         self.ppq = 960  # FL Studio default PPQ
-        self.use_pyflp = False  # Set to True to enable PyFLP injection
+        self.use_pyflp = Project is not None  # Prefer PyFLP when available
     
     def write(self, transproj: TransProj, filepath: str):
         """
@@ -39,19 +44,19 @@ class FLStudioWriter:
         logger.info(f"Input: {len(transproj.tracks)} tracks, {transproj.total_clips()} clips, {transproj.total_notes()} notes")
         self.ppq = transproj.ppq or self.ppq
         
-        # Build binary FLP (proven approach)
+        if self.use_pyflp:
+            self._write_with_pyflp(transproj, filepath)
+            return
+
+        # Build binary FLP (fallback approach)
         data = self._build_flp_binary(transproj)
-        
+
         # Write to file
         with open(filepath, 'wb') as f:
             f.write(data)
-        
+
         file_size = len(data)
         logger.info(f"✓ Written {file_size:,} bytes to {filepath}")
-        
-        # Optional: Inject advanced features with PyFLP
-        if self.use_pyflp:
-            self._inject_with_pyflp(filepath, transproj)
     
     def _build_flp_binary(self, transproj: TransProj) -> bytes:
         """
@@ -439,6 +444,102 @@ class FLStudioWriter:
         """
         logger.info("PyFLP injection not yet implemented")
         pass
+
+    def _write_with_pyflp(self, transproj: TransProj, filepath: str):
+        """Write FL Studio project using PyFLP when available."""
+        if Project is None:
+            raise ImportError("pyflp is required for PyFLP-based writing")
+
+        project = Project()
+        if hasattr(project, "tempo"):
+            project.tempo = transproj.tempo
+
+        channels = getattr(project, "channels", None)
+        if channels is None and hasattr(project, "channel_rack"):
+            channels = project.channel_rack
+
+        for track in transproj.tracks:
+            if channels and hasattr(channels, "add"):
+                channel = channels.add()
+            elif channels and hasattr(channels, "append"):
+                channel = None
+            else:
+                channel = None
+
+            if channel is not None:
+                if hasattr(channel, "name"):
+                    channel.name = track.name
+                if hasattr(channel, "volume"):
+                    channel.volume = track.volume
+                if hasattr(channel, "pan"):
+                    channel.pan = track.pan
+
+                if track.instrument:
+                    fl_plugin = PluginMapper.ableton_to_fl(
+                        track.instrument.name,
+                        is_instrument=True,
+                        device_type=track.instrument.device_type,
+                    )
+                    if hasattr(channel, "plugin"):
+                        channel.plugin = fl_plugin
+                    elif hasattr(channel, "generator"):
+                        channel.generator = fl_plugin
+
+        patterns = getattr(project, "patterns", None)
+        playlist = getattr(project, "playlist", None)
+
+        for track_idx, track in enumerate(transproj.tracks):
+            for clip in track.clips:
+                if not clip.is_midi:
+                    continue
+
+                pattern = None
+                if patterns and hasattr(patterns, "add"):
+                    pattern = patterns.add()
+                if pattern is not None and hasattr(pattern, "name"):
+                    pattern.name = f"{track.name} - {clip.name}"
+
+                if pattern is not None and hasattr(pattern, "notes"):
+                    for note in clip.notes:
+                        if hasattr(pattern.notes, "add"):
+                            note_obj = pattern.notes.add()
+                        else:
+                            note_obj = None
+                        if note_obj is not None:
+                            if hasattr(note_obj, "key"):
+                                note_obj.key = note.key
+                            if hasattr(note_obj, "position"):
+                                note_obj.position = int(note.position * self.ppq)
+                            if hasattr(note_obj, "length"):
+                                note_obj.length = int(note.duration * self.ppq)
+                            if hasattr(note_obj, "velocity"):
+                                note_obj.velocity = int(note.velocity * 127)
+
+                if playlist and hasattr(playlist, "items"):
+                    items = playlist.items
+                else:
+                    items = None
+
+                if items and hasattr(items, "add"):
+                    item = items.add()
+                    if hasattr(item, "pattern"):
+                        item.pattern = pattern
+                    if hasattr(item, "position"):
+                        item.position = int(clip.start * self.ppq)
+                    if hasattr(item, "length"):
+                        item.length = int(clip.duration * self.ppq)
+                    if hasattr(item, "track"):
+                        item.track = track_idx
+
+        if hasattr(project, "save"):
+            project.save(filepath)
+        elif hasattr(project, "write"):
+            project.write(filepath)
+        else:
+            with open(filepath, "wb") as handle:
+                handle.write(bytes(project))
+
+        logger.info("✓ Written %s with PyFLP", filepath)
 
 
 def write_flstudio_project(transproj: TransProj, filepath: str):

@@ -12,7 +12,9 @@ import logging
 from pathlib import Path
 
 from parsers.ableton_parser import parse_ableton_project
+from parsers.flstudio_parser import parse_flstudio_project
 from writers.flstudio_writer import write_flstudio_project
+from writers.ableton_writer import write_ableton_project
 
 VERSION = '2.0.0'
 
@@ -51,13 +53,23 @@ def convert_file(input_file: str, output_file: str = None, verbose: bool = False
         if not output_file:
             output_file = str(input_path.with_suffix('.flp'))
         
-        # Parse Ableton → TransProj
-        logger.info("Step 1/2: Parsing Ableton project...")
-        transproj = parse_ableton_project(input_file)
-        
-        # Write TransProj → FL Studio
-        logger.info("Step 2/2: Writing FL Studio project...")
-        write_flstudio_project(transproj, output_file)
+        if input_path.suffix.lower() == ".flp":
+            # Parse FL Studio → TransProj
+            logger.info("Step 1/2: Parsing FL Studio project...")
+            transproj = parse_flstudio_project(input_file)
+
+            # Write TransProj → Ableton
+            logger.info("Step 2/2: Writing Ableton project...")
+            output_file = output_file or str(input_path.with_suffix(".als"))
+            write_ableton_project(transproj, output_file)
+        else:
+            # Parse Ableton → TransProj
+            logger.info("Step 1/2: Parsing Ableton project...")
+            transproj = parse_ableton_project(input_file)
+
+            # Write TransProj → FL Studio
+            logger.info("Step 2/2: Writing FL Studio project...")
+            write_flstudio_project(transproj, output_file)
         
         # Verify
         output_path = Path(output_file)
@@ -120,7 +132,8 @@ def main():
         if success:
             print("SUCCESS")
             print("=" * 70)
-            output = args.output or str(Path(args.input).with_suffix('.flp'))
+            suffix = ".als" if Path(args.input).suffix.lower() == ".flp" else ".flp"
+            output = args.output or str(Path(args.input).with_suffix(suffix))
             print(f"Output: {output}")
         else:
             print("FAILED")
