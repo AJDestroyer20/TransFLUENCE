@@ -1,0 +1,11 @@
+# TransFLUENCE v2.0 - Architecture Refactor
+# Using mature libraries for binary format handling
+
+# FL Studio binary format (read/write)
+pyflp>=2.3.0
+
+# Ableton Live parser
+pyableton>=0.2.0
+
+# Optional: Enhanced features
+# numpy>=1.24.0  # For audio processing
