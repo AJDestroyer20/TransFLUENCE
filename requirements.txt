@@ -4,8 +4,8 @@
 # FL Studio binary format (read/write)
 pyflp>=2.3.0
 
-# Ableton Live parser
-pyableton>=0.2.0
+# Ableton Live parser (optional, XML parsing is built-in)
+# pyableton>=0.2.0
 
 # Optional: Enhanced features
 # numpy>=1.24.0  # For audio processing

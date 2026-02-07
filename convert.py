@@ -72,7 +72,7 @@ def convert_file(input_file: str, output_file: str = None, verbose: bool = False
         
     except ImportError as e:
         logger.error(f"Missing dependency: {e}")
-        logger.error("Install: pip install pyflp pyableton")
+        logger.error("Install: pip install pyflp")
         return False
     
     except Exception as e:

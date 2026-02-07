@@ -65,6 +65,7 @@ class AbletonParser:
         transproj = TransProj(
             name=Path(filepath).stem,
             tempo=self._get_tempo(liveset),
+            ppq=960,
             ableton_version=liveset.get('Creator', ''),
             is_session_view=self._detect_session_view(liveset)
         )
@@ -398,7 +399,9 @@ class AbletonParser:
                     plugin = Plugin(
                         name=device_name,
                         manufacturer='Ableton',
-                        is_instrument=True
+                        is_instrument=True,
+                        device_type=device_type,
+                        parameters=self._extract_device_parameters(device)
                     )
                     track.instrument = plugin
                     logger.debug(f"      → Instrument")
@@ -408,14 +411,16 @@ class AbletonParser:
                     plugin = Plugin(
                         name=device_name,
                         manufacturer='Ableton',
-                        is_instrument=False
+                        is_instrument=False,
+                        device_type=device_type,
+                        parameters=self._extract_device_parameters(device)
                     )
                     track.effects.append(plugin)
                     logger.debug(f"      → Effect")
     
     def _parse_drum_rack(self, device_elem: ET.Element) -> Rack:
         """Parse Drum Rack (DrumGroupDevice)"""
-        rack = Rack(name=self._get_device_name(device_elem))
+        rack = Rack(name=self._get_device_name(device_elem), rack_type=device_elem.tag)
         
         # Find drum pads in Branches
         branches = device_elem.find('.//Branches')
@@ -458,7 +463,7 @@ class AbletonParser:
     
     def _parse_instrument_rack(self, device_elem: ET.Element) -> Rack:
         """Parse Instrument Rack"""
-        rack = Rack(name=self._get_device_name(device_elem))
+        rack = Rack(name=self._get_device_name(device_elem), rack_type=device_elem.tag)
         
         # Find chains
         chains = device_elem.find('.//Chains')
@@ -470,7 +475,9 @@ class AbletonParser:
                         plugin = Plugin(
                             name=self._get_device_name(sub_device),
                             manufacturer='Ableton',
-                            is_instrument=True
+                            is_instrument=True,
+                            device_type=sub_device.tag,
+                            parameters=self._extract_device_parameters(sub_device)
                         )
                         rack.plugins.append(plugin)
         
@@ -478,7 +485,7 @@ class AbletonParser:
     
     def _parse_fx_rack(self, device_elem: ET.Element) -> Rack:
         """Parse FX Rack"""
-        rack = Rack(name=self._get_device_name(device_elem))
+        rack = Rack(name=self._get_device_name(device_elem), rack_type=device_elem.tag)
         
         # Find chains
         chains = device_elem.find('.//Chains')
@@ -490,7 +497,9 @@ class AbletonParser:
                         plugin = Plugin(
                             name=self._get_device_name(sub_device),
                             manufacturer='Ableton',
-                            is_instrument=False
+                            is_instrument=False,
+                            device_type=sub_device.tag,
+                            parameters=self._extract_device_parameters(sub_device)
                         )
                         rack.plugins.append(plugin)
         
@@ -513,6 +522,36 @@ class AbletonParser:
                 return path_elem.get('Value', '')
         
         return ''
+
+    def _extract_device_parameters(self, device_elem: ET.Element) -> dict:
+        """Extract device parameters from Ableton XML."""
+        params = {}
+        for param in device_elem.iter():
+            if param.tag not in {'Parameter', 'DeviceParameter'}:
+                continue
+
+            name_elem = param.find('.//Name')
+            if name_elem is None:
+                continue
+            name = name_elem.get('Value', '')
+            if not name:
+                continue
+
+            value = None
+            manual_elem = param.find('.//Manual')
+            if manual_elem is not None:
+                value = manual_elem.get('Value')
+            if value is None:
+                value = param.get('Value')
+            if value is None:
+                continue
+
+            try:
+                params[name] = float(value)
+            except (TypeError, ValueError):
+                continue
+
+        return params
     
     def _get_device_name(self, device_elem: ET.Element) -> str:
         """Get device name"""
